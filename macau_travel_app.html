@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>澳門之旅 - 外部導航版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <style>
+        /* 禪風大地色系：維持您的配色定義 */
+        .color-primary { background-color: #956b5c; } 
+        .text-primary { color: #956b5c; }
+        .border-primary { border-color: #956b5c; }
+        .bg-secondary { background-color: #f7f3e8; } 
+        .color-accent { background-color: #64b7ca; } 
+        .text-accent { color: #64b7ca; }
+
+        /* 介面基礎樣式 */
+        body { margin: 0; background-color: #f3f4f6; }
+        #app { max-width: 420px; margin: 0 auto; background-color: #fffaf0; min-height: 100vh; font-family: "Noto Sans TC", "微軟正黑體", "思源黑體", sans-serif; }
+        
+        .horizontal-scroll-dates {
+            overflow-x: scroll;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .horizontal-scroll-dates::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .card-shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04); }
+        /* 移除原有的地圖容器高度和錯誤隱藏 */
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="fixed top-0 w-full max-w-[420px] bg-white border-b border-gray-200 z-20 card-shadow">
+            <div class="flex justify-around text-center p-3 text-sm font-medium">
+                <button 
+                    @click="activeTab = 'itinerary'" 
+                    :class="{'text-primary border-b-2 border-primary': activeTab === 'itinerary', 'text-gray-500': activeTab !== 'itinerary'}"
+                    class="py-1 px-3 transition duration-150 ease-in-out flex items-center gap-1"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" /></svg>
+                    行程表
+                </button>
+                <button 
+                    @click="activeTab = 'map'" 
+                    :class="{'text-primary border-b-2 border-primary': activeTab === 'map', 'text-gray-500': activeTab !== 'map'}"
+                    class="py-1 px-3 transition duration-150 ease-in-out flex items-center gap-1"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12 1.586l-4 4V14l4 4V1.586zM15 3a1 1 0 011 1v10a1 1 0 01-1 1h-3l-4-4-4 4H5a1 1 0 01-1-1V4a1 1 0 011-1h3l4 4 4-4h1z" clip-rule="evenodd" /></svg>
+                    地圖導航
+                </button>
+                 <button 
+                    @click="activeTab = 'info'" 
+                    :class="{'text-primary border-b-2 border-primary': activeTab === 'info', 'text-gray-500': activeTab !== 'info'}"
+                    class="py-1 px-3 transition duration-150 ease-in-out flex items-center gap-1"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" /><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" /></svg>
+                    資訊
+                </button>
+            </div>
+        </div>
+
+        <main class="pt-[56px] pb-4">
+            <div v-show="activeTab === 'itinerary'">
+                <div class="p-4 bg-secondary border-b border-gray-200">
+                    <h1 class="text-3xl font-light mb-1 text-gray-800">澳門漫遊</h1>
+                    <div class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
+                        旅行日期：{{ dates[0].full }} ~ {{ dates[dates.length - 1].full }}
+                    </div>
+                </div>
+
+                <div class="horizontal-scroll-dates bg-secondary py-3 mb-4 sticky top-[56px] z-10 border-b border-gray-200">
+                    <div class="flex px-4 space-x-3">
+                        <button 
+                            v-for="date in dates" :key="date.full"
+                            @click="selectedDate = date.full"
+                            :class="{'color-primary text-white card-shadow': selectedDate === date.full, 'text-gray-700 bg-white border border-gray-200': selectedDate !== date.full}"
+                            class="flex-shrink-0 p-3 rounded-xl transition duration-200 text-center w-20"
+                        >
+                            <p class="text-xs font-semibold uppercase">{{ date.dayOfWeek }}</p>
+                            <p class="text-xl font-bold">{{ date.dayOfMonth }}</p>
+                            <p class="text-xs">{{ date.month }}</p>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-4 pt-0">
+                    <div class="bg-gradient-to-br color-accent p-4 rounded-xl card-shadow mb-6 flex justify-between items-center text-white">
+                        <div>
+                            <p class="text-xl font-semibold mb-1">🌤️ 澳門即時天氣</p>
+                            <p class="text-4xl font-light">{{ macauWeather.currentTemp }}</p>
+                            <p class="text-sm">{{ macauWeather.condition }}，高 {{ macauWeather.highTemp }} / 低 {{ macauWeather.lowTemp }}</p>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-80" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.356 2.5a1 1 0 01.326 1.353l-.986 1.71a1 1 0 11-1.71-1.026l.986-1.71a1 1 0 011.385-.326zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.644 4.5a1 1 0 011.385.326l.986 1.71a1 1 0 11-1.71 1.026l-.986-1.71a1 1 0 01.326-1.353zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM6 10a1 1 0 11-2 0 1 1 0 012 0zm10 0a1 1 0 11-2 0 1 1 0 012 0z" clip-rule="evenodd" /><path d="M10 3a7 7 0 100 14 7 7 0 000-14zm0 2a5 5 0 000 10 5 5 0 000-10z" /></svg></div>
+
+                    <div class="mb-6 p-4 border rounded-xl bg-gray-50/50">
+                        <h3 class="font-semibold mb-3 text-primary border-l-4 border-primary pl-2">新增當日活動</h3>
+                        <div class="space-y-3">
+                            <input type="time" v-model="newItem.time" class="w-full p-3 border rounded-lg focus:ring-primary focus:border-primary">
+                            <input type="text" v-model="newItem.location" placeholder="活動地點或名稱" class="w-full p-3 border rounded-lg focus:ring-primary focus:border-primary">
+                            <button @click="addItem" class="w-full color-primary text-white p-3 rounded-xl hover:opacity-90 transition duration-150 font-medium">
+                                新增行程
+                            </button>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-bold mb-3 text-gray-800">活動列表</h3>
+                    <ul class="space-y-3">
+                        <li v-if="filteredItinerary.length === 0" class="text-gray-500 p-4 text-center border-dashed border-2 rounded-xl">
+                            當日尚未安排行程。
+                        </li>
+                        <li v-for="(item, index) in filteredItinerary" :key="item.time + item.location" class="bg-white p-4 rounded-xl card-shadow flex items-center space-x-3 border border-gray-100">
+                            <div v-if="editingIndex !== index" class="flex-grow">
+                                <p class="text-xl font-semibold text-gray-800">{{ item.time }}</p>
+                                <p class="text-gray-600">{{ item.location }}</p>
+                                <span @click="navigateTo(item.location)" class="inline-flex items-center text-sm text-accent mt-1 cursor-pointer hover:opacity-80">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zM5.5 8.5a.5.5 0 011 0v3a.5.5 0 01-1 0v-3zM14 9a1 1 0 01-1 1H7a1 1 0 010-2h6a1 1 0 011 1z" /></svg>
+                                    開啟導航
+                                </span>
+                            </div>
+                            <div v-if="editingIndex !== index" class="flex-shrink-0 flex space-x-2">
+                                <button @click="editItem(index)" class="p-2 bg-gray-100 rounded-full text-primary hover:bg-gray-200 transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
+                                </button>
+                                <button @click="deleteItem(index)" class="p-2 bg-red-100 rounded-full text-red-500 hover:bg-red-200 transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 112 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                                </button>
+                            </div>
+                            <div v-else class="w-full space-y-2">
+                                <input type="time" v-model="editingItem.time" class="w-full p-2 border rounded-lg">
+                                <input type="text" v-model="editingItem.location" class="w-full p-2 border rounded-lg">
+                                <div class="flex space-x-2">
+                                    <button @click="saveEdit" class="flex-1 color-primary text-white p-2 rounded-lg text-sm">儲存</button>
+                                    <button @click="cancelEdit" class="flex-1 bg-gray-300 text-gray-800 p-2 rounded-lg text-sm">取消</button>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div v-show="activeTab === 'map'" class="p-4">
+                <h2 class="text-2xl font-light mb-4 text-gray-800">📍 外部地圖與導航</h2>
+                 <div class="mb-4 p-5 bg-white rounded-xl card-shadow border border-gray-100">
+                     <p class="text-gray-600 mb-4 text-sm">輸入地點後，將**開啟新的 Google 地圖網頁**進行搜尋與導航</p>
+                    
+                    <input type="text" v-model="mapSearchQuery" @keyup.enter="searchMap" placeholder="輸入地點名稱 (例如: 澳門旅遊塔)" class="w-full p-3 border rounded-xl focus:ring-primary focus:border-primary card-shadow">
+                    
+                    <button @click="searchMap" class="w-full color-primary text-white p-3 rounded-xl hover:opacity-90 transition duration-150 font-medium mt-3">
+                        開啟 Google 地圖搜尋
+                    </button>
+                </div>
+            </div>
+            
+            <div v-show="activeTab === 'info'" class="p-4 space-y-6">
+                <h2 class="text-2xl font-light mb-4 text-gray-800">✈️ 航班與住宿資訊</h2>
+                
+                <div class="bg-white p-5 rounded-xl card-shadow border border-gray-100">
+                    <h3 class="text-lg font-bold mb-3 text-primary border-l-4 border-primary pl-2">去程航班 (2/28)</h3>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex justify-between border-b pb-1">
+                            <span class="font-medium">航班編號:</span>
+                            <span>JX201</span>
+                        </li>
+                        <li class="flex justify-between border-b pb-1">
+                            <span class="font-medium">出發地/時間:</span>
+                            <span>TPE 08:05</span>
+                        </li>
+                        <li class="flex justify-between border-b pb-1">
+                            <span class="font-medium">目的地/時間:</span>
+                            <span>MFM 10:05</span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="font-medium">訂位代號:</span>
+                            <span class="text-accent font-semibold">FUYMD4</span>
+                        </li>
+                    </ul>
+                    <h3 class="text-lg font-bold mt-4 mb-3 text-primary border-l-4 border-primary pl-2">回程航班 (3/3)</h3>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex justify-between border-b pb-1">
+                            <span class="font-medium">航班編號:</span>
+                            <span>JX206</span>
+                        </li>
+                        <li class="flex justify-between border-b pb-1">
+                            <span class="font-medium">出發地/時間:</span>
+                            <span>MFM 20:35</span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="font-medium">目的地/時間:</span>
+                            <span>TPE 22:25</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="bg-white p-5 rounded-xl card-shadow border border-gray-100">
+                    <h3 class="text-lg font-bold mb-3 text-primary border-l-4 border-primary pl-2">🏨 住宿資訊</h3>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex justify-between border-b pb-1">
+                            <span class="font-medium">飯店名稱:</span>
+                            <span>澳門十六浦索菲特大飯店</span>
+                        </li>
+                        <li class="flex justify-between border-b pb-1">
+                            <span class="font-medium">入住/退房:</span>
+                            <span>2/28 - 3/3 (3 晚)</span>
+                        </li>
+                        <li class="flex justify-between border-b pb-1">
+                            <span class="font-medium">訂房號碼:</span>
+                            <span class="text-accent font-semibold">73321992081889</span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="font-medium">地址:</span>
+                            <span class="text-right">澳門巴素打爾古街<br> (Rua Do Visconde Paco De Arcos)</span>
+                        </li>
+                    </ul>
+                </div>
+                
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        // --- 輔助函數 ---
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const generateFixedDates = (startDateStr, numDays) => {
+            const days = ['日', '一', '二', '三', '四', '五', '六'];
+            const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+            const [startMonth, startDay] = startDateStr.split('/').map(Number);
+            
+            let today = new Date(2026, startMonth - 1, startDay); 
+
+            const dateList = [];
+
+            for (let i = 0; i < numDays; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                
+                dateList.push({
+                    full: formatDate(date),
+                    dayOfWeek: days[date.getDay()],
+                    dayOfMonth: String(date.getDate()),
+                    month: months[date.getMonth()],
+                });
+            }
+            return dateList;
+        };
+        // --- End 輔助函數 ---
+
+        createApp({
+            setup() {
+                const activeTab = ref('itinerary');
+                
+                // --- 1. 行程表邏輯 (Itinerary) ---
+                const dates = generateFixedDates('2/28', 5);
+                const selectedDate = ref(dates[0].full);
+
+                const itinerary = ref([
+                    { date: dates[0].full, time: '09:00', location: '澳門大三巴牌坊' },
+                    { date: dates[0].full, time: '13:00', location: '議事亭前地' },
+                    { date: dates[1].full, time: '10:00', location: '澳門旅遊塔' }
+                ]);
+
+                const newItem = ref({ time: '', location: '' });
+                const editingIndex = ref(null);
+                const editingItem = ref({});
+                let currentEditingDate = null; 
+
+                const macauWeather = ref({
+                    currentTemp: '23°C',
+                    highTemp: '24°C',
+                    lowTemp: '17°C',
+                    condition: '晴朗 ',
+                });
+
+                const filteredItinerary = computed(() => {
+                    const dailyItems = itinerary.value.filter(item => item.date === selectedDate.value);
+                    return dailyItems.sort((a, b) => (a.time > b.time) ? 1 : -1);
+                });
+
+                const addItem = () => {
+                    if (newItem.value.time && newItem.value.location) {
+                        const newActivity = { 
+                            date: selectedDate.value,
+                            time: newItem.value.time, 
+                            location: newItem.value.location 
+                        };
+                        itinerary.value.push(newActivity);
+                        newItem.value = { time: '', location: '' };
+                    }
+                };
+                // (省略 editItem, saveEdit, cancelEdit, deleteItem 邏輯 - 與原代碼相同)
+                const editItem = (index) => {
+                    const actualItem = filteredItinerary.value[index];
+                    editingIndex.value = index; 
+                    editingItem.value = { ...actualItem };
+                    currentEditingDate = actualItem.date; 
+                };
+
+                const saveEdit = () => {
+                    if (editingIndex.value !== null) {
+                        const actualItem = filteredItinerary.value[editingIndex.value];
+                        const originalIndex = itinerary.value.findIndex(item => item === actualItem);
+                        
+                        itinerary.value[originalIndex] = { 
+                            date: currentEditingDate, 
+                            time: editingItem.value.time,
+                            location: editingItem.value.location
+                        };
+                        cancelEdit();
+                    }
+                };
+
+                const cancelEdit = () => {
+                    editingIndex.value = null;
+                    editingItem.value = {};
+                    currentEditingDate = null;
+                };
+
+                const deleteItem = (index) => {
+                    if (confirm('確定要刪除此行程嗎？')) {
+                        const actualItem = filteredItinerary.value[index];
+                        const originalIndex = itinerary.value.findIndex(item => item === actualItem);
+                        
+                        itinerary.value.splice(originalIndex, 1);
+                        cancelEdit();
+                    }
+                };
+                
+                // --- 2. 地圖與導航邏輯 (Map) ---
+                const mapSearchQuery = ref('澳門');
+                
+                // 核心函式：開啟外部 Google Maps 網頁
+                const navigateTo = (location) => {
+                    if (!location) {
+                         alert('請輸入地點！');
+                         return;
+                    }
+                    // 使用 Google Maps 的網址 API 進行搜尋
+                    const query = encodeURIComponent(location + ', 澳門');
+                    // 'q=' 參數用於搜尋地點
+                    const url = `https://www.google.com/maps/dir/?api=1&destination=${query}`;
+                    window.open(url, '_blank');
+                };
+
+                // 在「地圖導航」分頁上搜尋
+                const searchMap = () => {
+                    navigateTo(mapSearchQuery.value);
+                };
+                // ------------------------------------
+
+                // 已移除所有 Google Maps 初始化和 Geocoding 代碼
+
+                return {
+                    activeTab,
+                    // 行程與日期
+                    dates,
+                    selectedDate,
+                    itinerary,
+                    filteredItinerary,
+                    newItem,
+                    addItem,
+                    editingIndex,
+                    editingItem,
+                    editItem,
+                    saveEdit,
+                    cancelEdit,
+                    deleteItem,
+                    navigateTo, // 用於行程列表中的導航按鈕
+                    macauWeather,
+                    // 地圖
+                    mapSearchQuery,
+                    searchMap, // 用於地圖分頁的搜尋按鈕
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
