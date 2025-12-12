@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>澳門之旅 - 即時天氣版</title>
+    <title>澳門之旅 - 即時天氣版 (已修復)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     
@@ -168,7 +168,7 @@
                     <ul class="space-y-2 text-gray-600">
                         <li class="flex justify-between border-b pb-1">
                             <span class="font-medium">航班編號:</span>
-                            <span> </span>
+                            <span>JX201</span>
                         </li>
                         <li class="flex justify-between border-b pb-1">
                             <span class="font-medium">出發地/時間:</span>
@@ -180,14 +180,14 @@
                         </li>
                         <li class="flex justify-between">
                             <span class="font-medium">訂位代號:</span>
-                            <span class="text-accent font-semibold"> </span>
+                            <span class="text-accent font-semibold">FUYMD4</span>
                         </li>
                     </ul>
                     <h3 class="text-lg font-bold mt-4 mb-3 text-primary border-l-4 border-primary pl-2">回程航班 (3/3)</h3>
                     <ul class="space-y-2 text-gray-600">
                         <li class="flex justify-between border-b pb-1">
                             <span class="font-medium">航班編號:</span>
-                            <span> </span>
+                            <span>JX206</span>
                         </li>
                         <li class="flex justify-between border-b pb-1">
                             <span class="font-medium">出發地/時間:</span>
@@ -213,7 +213,7 @@
                         </li>
                         <li class="flex justify-between border-b pb-1">
                             <span class="font-medium">訂房號碼:</span>
-                            <span class="text-accent font-semibold"> </span>
+                            <span class="text-accent font-semibold">73321992081889</span>
                         </li>
                         <li class="flex justify-between">
                             <span class="font-medium">地址:</span>
@@ -230,7 +230,7 @@
         const { createApp, ref, computed, watch, onMounted } = Vue;
 
         // 【！！！重要：請在這裡填入您的 OpenWeatherMap API Key！！！】
-        const API_KEY = 'c3da620f54f87e1cc3e126f4ea8b805f';
+        const API_KEY = 'c3da620f54f87e1cc3e126f4ea8b805f'; // <-- 您的 API Key
         // 澳門的經緯度 (OpenWeatherMap API 建議使用經緯度)
         const MACAU_LAT = 22.1987;
         const MACAU_LON = 113.5439; 
@@ -292,7 +292,7 @@
             setup() {
                 const activeTab = ref('itinerary');
                 
-                // --- 天氣邏輯修正開始 ---
+                // --- 天氣邏輯 ---
                 const macauWeather = ref({
                     currentTemp: 'N/A',
                     highTemp: 'N/A',
@@ -304,12 +304,13 @@
 
                 // OpenWeatherMap API 呼叫函式
                 const fetchWeather = async () => {
-                    if (API_KEY === 'c3da620f54f87e1cc3e126f4ea8b805f' || !API_KEY) {
+                    // 【關鍵修正】: 移除不必要的 API_KEY 檢查，避免程式誤判已填寫的金鑰為預設值。
+                    if (!API_KEY) {
                         macauWeather.value = {
                             currentTemp: 'N/A',
                             highTemp: 'N/A',
                             lowTemp: 'N/A',
-                            condition: 'c3da620f54f87e1cc3e126f4ea8b805f',
+                            condition: '錯誤：未提供 API Key',
                             isLoading: false,
                             error: true,
                         };
@@ -324,7 +325,12 @@
                     try {
                         const response = await fetch(URL);
                         if (!response.ok) {
-                            throw new Error(`HTTP 錯誤! 狀態碼: ${response.status}`);
+                            // 狀態碼 401 (Unauthorized) 通常表示 API Key 無效或未激活
+                            let errMsg = `HTTP 錯誤! 狀態碼: ${response.status}`;
+                            if (response.status === 401) {
+                                errMsg = "API Key 無效或未激活 (401 Unauthorized)";
+                            }
+                            throw new Error(errMsg);
                         }
                         const data = await response.json();
                         
@@ -345,13 +351,13 @@
                             currentTemp: '---',
                             highTemp: '---',
                             lowTemp: '---',
-                            condition: '載入失敗',
+                            condition: `載入失敗: ${error.message.substring(0, 30)}...`, // 顯示部分錯誤訊息
                             isLoading: false,
                             error: true,
                         };
                     }
                 };
-                // --- 天氣邏輯修正結束 ---
+                // --- 天氣邏輯結束 ---
 
                 // --- 1. 行程表邏輯 (Itinerary) ---
                 const dates = generateFixedDates('2/28', 5);
@@ -360,7 +366,7 @@
                 const defaultItinerary = [
                     { date: dates[0].full, time: '04:00', location: '起～床～' },
                     { date: dates[0].full, time: '15:00', location: 'check in' },
-                    { date: dates[1].full, time: '', location: ' ' }
+                    { date: dates[1].full, time: '10:00', location: '大三巴牌坊' }
                 ];
                 const itinerary = ref(loadItinerary(defaultItinerary));
 
@@ -465,7 +471,7 @@
                     cancelEdit,
                     deleteItem,
                     navigateTo,
-                    macauWeather, // 更新為響應式天氣物件
+                    macauWeather, 
                     // 地圖
                     mapSearchQuery,
                     searchMap,
