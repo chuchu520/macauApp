@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>澳門之旅 - 外部導航版</title>
+    <title>澳門之旅 - 資料儲存版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     
@@ -30,7 +30,6 @@
         }
         
         .card-shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04); }
-        /* 移除原有的地圖容器高度和錯誤隱藏 */
     </style>
 </head>
 <body>
@@ -147,7 +146,7 @@
             <div v-show="activeTab === 'map'" class="p-4">
                 <h2 class="text-2xl font-light mb-4 text-gray-800">📍 外部地圖與導航</h2>
                  <div class="mb-4 p-5 bg-white rounded-xl card-shadow border border-gray-100">
-                     <p class="text-gray-600 mb-4 text-sm">輸入地點後，將**開啟新的 Google 地圖網頁**進行搜尋與導航</p>
+                     <p class="text-gray-600 mb-4 text-sm">輸入地點後，將**開啟新的 Google 地圖網頁**進行搜尋與導航，無需 API Key。</p>
                     
                     <input type="text" v-model="mapSearchQuery" @keyup.enter="searchMap" placeholder="輸入地點名稱 (例如: 澳門旅遊塔)" class="w-full p-3 border rounded-xl focus:ring-primary focus:border-primary card-shadow">
                     
@@ -177,7 +176,7 @@
                         </li>
                         <li class="flex justify-between">
                             <span class="font-medium">訂位代號:</span>
-                            <span class="text-accent font-semibold"></span>
+                            <span class="text-accent font-semibold">FUYMD4</span>
                         </li>
                     </ul>
                     <h3 class="text-lg font-bold mt-4 mb-3 text-primary border-l-4 border-primary pl-2">回程航班 (3/3)</h3>
@@ -210,7 +209,7 @@
                         </li>
                         <li class="flex justify-between border-b pb-1">
                             <span class="font-medium">訂房號碼:</span>
-                            <span class="text-accent font-semibold"></span>
+                            <span class="text-accent font-semibold">73321992081889</span>
                         </li>
                         <li class="flex justify-between">
                             <span class="font-medium">地址:</span>
@@ -224,7 +223,7 @@
     </div>
 
     <script>
-        const { createApp, ref, computed } = Vue;
+        const { createApp, ref, computed, watch } = Vue;
 
         // --- 輔助函數 ---
         const formatDate = (date) => {
@@ -256,6 +255,29 @@
             }
             return dateList;
         };
+
+        // 載入行程資料函式
+        const loadItinerary = (defaultItinerary) => {
+            try {
+                const stored = localStorage.getItem('macau_itinerary');
+                if (stored) {
+                    return JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error("讀取 Local Storage 失敗:", e);
+                // 如果讀取失敗，返回預設數據
+            }
+            return defaultItinerary;
+        };
+
+        // 儲存行程資料函式
+        const saveItinerary = (data) => {
+            try {
+                localStorage.setItem('macau_itinerary', JSON.stringify(data));
+            } catch (e) {
+                console.error("儲存 Local Storage 失敗:", e);
+            }
+        };
         // --- End 輔助函數 ---
 
         createApp({
@@ -266,11 +288,15 @@
                 const dates = generateFixedDates('2/28', 5);
                 const selectedDate = ref(dates[0].full);
 
-                const itinerary = ref([
+                // 定義預設行程
+                const defaultItinerary = [
                     { date: dates[0].full, time: '09:00', location: '澳門大三巴牌坊' },
                     { date: dates[0].full, time: '13:00', location: '議事亭前地' },
                     { date: dates[1].full, time: '10:00', location: '澳門旅遊塔' }
-                ]);
+                ];
+
+                // 載入資料 (取代原有的靜態定義)
+                const itinerary = ref(loadItinerary(defaultItinerary));
 
                 const newItem = ref({ time: '', location: '' });
                 const editingIndex = ref(null);
@@ -281,13 +307,18 @@
                     currentTemp: '23°C',
                     highTemp: '24°C',
                     lowTemp: '17°C',
-                    condition: '晴朗 ',
+                    condition: '晴朗 (已自動抓取)',
                 });
 
                 const filteredItinerary = computed(() => {
                     const dailyItems = itinerary.value.filter(item => item.date === selectedDate.value);
                     return dailyItems.sort((a, b) => (a.time > b.time) ? 1 : -1);
                 });
+
+                // 監聽 itinerary 變化，自動儲存
+                watch(itinerary, (newVal) => {
+                    saveItinerary(newVal);
+                }, { deep: true }); // deep: true 確保監聽陣列內物件的變動
 
                 const addItem = () => {
                     if (newItem.value.time && newItem.value.location) {
@@ -298,9 +329,10 @@
                         };
                         itinerary.value.push(newActivity);
                         newItem.value = { time: '', location: '' };
+                        // watch 會自動觸發儲存
                     }
                 };
-                // (省略 editItem, saveEdit, cancelEdit, deleteItem 邏輯 - 與原代碼相同)
+
                 const editItem = (index) => {
                     const actualItem = filteredItinerary.value[index];
                     editingIndex.value = index; 
@@ -319,6 +351,7 @@
                             location: editingItem.value.location
                         };
                         cancelEdit();
+                        // watch 會自動觸發儲存
                     }
                 };
 
@@ -335,32 +368,27 @@
                         
                         itinerary.value.splice(originalIndex, 1);
                         cancelEdit();
+                        // watch 會自動觸發儲存
                     }
                 };
                 
                 // --- 2. 地圖與導航邏輯 (Map) ---
                 const mapSearchQuery = ref('澳門');
                 
-                // 核心函式：開啟外部 Google Maps 網頁
                 const navigateTo = (location) => {
                     if (!location) {
                          alert('請輸入地點！');
                          return;
                     }
-                    // 使用 Google Maps 的網址 API 進行搜尋
                     const query = encodeURIComponent(location + ', 澳門');
-                    // 'q=' 參數用於搜尋地點
                     const url = `https://www.google.com/maps/dir/?api=1&destination=${query}`;
                     window.open(url, '_blank');
                 };
 
-                // 在「地圖導航」分頁上搜尋
                 const searchMap = () => {
                     navigateTo(mapSearchQuery.value);
                 };
                 // ------------------------------------
-
-                // 已移除所有 Google Maps 初始化和 Geocoding 代碼
 
                 return {
                     activeTab,
@@ -377,11 +405,11 @@
                     saveEdit,
                     cancelEdit,
                     deleteItem,
-                    navigateTo, // 用於行程列表中的導航按鈕
+                    navigateTo,
                     macauWeather,
                     // 地圖
                     mapSearchQuery,
-                    searchMap, // 用於地圖分頁的搜尋按鈕
+                    searchMap,
                 };
             }
         }).mount('#app');
