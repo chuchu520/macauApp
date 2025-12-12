@@ -230,7 +230,7 @@
         const { createApp, ref, computed, watch, onMounted } = Vue;
 
         // 【！！！重要：請在這裡填入您的 OpenWeatherMap API Key！！！】
-        const API_KEY = 'e7d86237796483f6dad61173b7bd0e34';
+        const API_KEY = 'c3da620f54f87e1cc3e126f4ea8b805f';
         // 澳門的經緯度 (OpenWeatherMap API 建議使用經緯度)
         const MACAU_LAT = 22.1987;
         const MACAU_LON = 113.5439; 
@@ -304,12 +304,12 @@
 
                 // OpenWeatherMap API 呼叫函式
                 const fetchWeather = async () => {
-                    if (API_KEY === 'YOUR_OPENWEATHERMAP_API_KEY' || !API_KEY) {
+                    if (API_KEY === 'c3da620f54f87e1cc3e126f4ea8b805f' || !API_KEY) {
                         macauWeather.value = {
                             currentTemp: 'N/A',
                             highTemp: 'N/A',
                             lowTemp: 'N/A',
-                            condition: 'e7d86237796483f6dad61173b7bd0e34',
+                            condition: 'c3da620f54f87e1cc3e126f4ea8b805f',
                             isLoading: false,
                             error: true,
                         };
