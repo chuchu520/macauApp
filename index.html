@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>澳門之旅 - 資料儲存版</title>
+    <title>澳門之旅 - 即時天氣版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     
@@ -91,9 +91,13 @@
                 <div class="p-4 pt-0">
                     <div class="bg-gradient-to-br color-accent p-4 rounded-xl card-shadow mb-6 flex justify-between items-center text-white">
                         <div>
-                            <p class="text-xl font-semibold mb-1">🌤️ 澳門即時天氣</p>
+                            <p class="text-xl font-semibold mb-1">
+                                <span v-if="!macauWeather.isLoading">🌤️ 澳門即時天氣</span>
+                                <span v-else>🔄 正在更新天氣...</span>
+                            </p>
                             <p class="text-4xl font-light">{{ macauWeather.currentTemp }}</p>
                             <p class="text-sm">{{ macauWeather.condition }}，高 {{ macauWeather.highTemp }} / 低 {{ macauWeather.lowTemp }}</p>
+                            <p v-if="macauWeather.error" class="text-xs text-red-100 mt-1">無法載入天氣，請檢查 API Key。</p>
                         </div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-80" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.356 2.5a1 1 0 01.326 1.353l-.986 1.71a1 1 0 11-1.71-1.026l.986-1.71a1 1 0 011.385-.326zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.644 4.5a1 1 0 011.385.326l.986 1.71a1 1 0 11-1.71 1.026l-.986-1.71a1 1 0 01.326-1.353zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM6 10a1 1 0 11-2 0 1 1 0 012 0zm10 0a1 1 0 11-2 0 1 1 0 012 0z" clip-rule="evenodd" /><path d="M10 3a7 7 0 100 14 7 7 0 000-14zm0 2a5 5 0 000 10 5 5 0 000-10z" /></svg></div>
 
@@ -223,9 +227,15 @@
     </div>
 
     <script>
-        const { createApp, ref, computed, watch } = Vue;
+        const { createApp, ref, computed, watch, onMounted } = Vue;
 
-        // --- 輔助函數 ---
+        // 【！！！重要：請在這裡填入您的 OpenWeatherMap API Key！！！】
+        const API_KEY = 'YOUR_OPENWEATHERMAP_API_KEY';
+        // 澳門的經緯度 (OpenWeatherMap API 建議使用經緯度)
+        const MACAU_LAT = 22.1987;
+        const MACAU_LON = 113.5439; 
+        
+        // --- 輔助函數 (與原代碼相同) ---
         const formatDate = (date) => {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -256,7 +266,7 @@
             return dateList;
         };
 
-        // 載入行程資料函式
+        // Local Storage 相關函式 (與原代碼相同)
         const loadItinerary = (defaultItinerary) => {
             try {
                 const stored = localStorage.getItem('macau_itinerary');
@@ -265,12 +275,10 @@
                 }
             } catch (e) {
                 console.error("讀取 Local Storage 失敗:", e);
-                // 如果讀取失敗，返回預設數據
             }
             return defaultItinerary;
         };
 
-        // 儲存行程資料函式
         const saveItinerary = (data) => {
             try {
                 localStorage.setItem('macau_itinerary', JSON.stringify(data));
@@ -284,18 +292,76 @@
             setup() {
                 const activeTab = ref('itinerary');
                 
+                // --- 天氣邏輯修正開始 ---
+                const macauWeather = ref({
+                    currentTemp: 'N/A',
+                    highTemp: 'N/A',
+                    lowTemp: 'N/A',
+                    condition: '載入中...',
+                    isLoading: true,
+                    error: false,
+                });
+
+                // OpenWeatherMap API 呼叫函式
+                const fetchWeather = async () => {
+                    if (API_KEY === 'YOUR_OPENWEATHERMAP_API_KEY' || !API_KEY) {
+                        macauWeather.value = {
+                            currentTemp: 'N/A',
+                            highTemp: 'N/A',
+                            lowTemp: 'N/A',
+                            condition: 'e7d86237796483f6dad61173b7bd0e34',
+                            isLoading: false,
+                            error: true,
+                        };
+                        return;
+                    }
+
+                    const URL = `https://api.openweathermap.org/data/2.5/weather?lat=${MACAU_LAT}&lon=${MACAU_LON}&appid=${API_KEY}&units=metric&lang=zh_tw`;
+                    
+                    macauWeather.value.isLoading = true;
+                    macauWeather.value.error = false;
+
+                    try {
+                        const response = await fetch(URL);
+                        if (!response.ok) {
+                            throw new Error(`HTTP 錯誤! 狀態碼: ${response.status}`);
+                        }
+                        const data = await response.json();
+                        
+                        // 處理並更新天氣數據
+                        macauWeather.value = {
+                            currentTemp: `${Math.round(data.main.temp)}°C`,
+                            highTemp: `${Math.round(data.main.temp_max)}°C`,
+                            lowTemp: `${Math.round(data.main.temp_min)}°C`,
+                            condition: data.weather[0].description,
+                            isLoading: false,
+                            error: false,
+                        };
+                        console.log("天氣資訊載入成功", data);
+
+                    } catch (error) {
+                        console.error("載入天氣失敗:", error);
+                        macauWeather.value = {
+                            currentTemp: '---',
+                            highTemp: '---',
+                            lowTemp: '---',
+                            condition: '載入失敗',
+                            isLoading: false,
+                            error: true,
+                        };
+                    }
+                };
+                // --- 天氣邏輯修正結束 ---
+
                 // --- 1. 行程表邏輯 (Itinerary) ---
                 const dates = generateFixedDates('2/28', 5);
                 const selectedDate = ref(dates[0].full);
 
-                // 定義預設行程
                 const defaultItinerary = [
                     { date: dates[0].full, time: '09:00', location: '澳門大三巴牌坊' },
                     { date: dates[0].full, time: '13:00', location: '議事亭前地' },
                     { date: dates[1].full, time: '10:00', location: '澳門旅遊塔' }
                 ];
-
-                // 載入資料 (取代原有的靜態定義)
                 const itinerary = ref(loadItinerary(defaultItinerary));
 
                 const newItem = ref({ time: '', location: '' });
@@ -303,22 +369,14 @@
                 const editingItem = ref({});
                 let currentEditingDate = null; 
 
-                const macauWeather = ref({
-                    currentTemp: ' ',
-                    highTemp: ' ',
-                    lowTemp: ' ',
-                    condition: '  ',
-                });
-
                 const filteredItinerary = computed(() => {
                     const dailyItems = itinerary.value.filter(item => item.date === selectedDate.value);
                     return dailyItems.sort((a, b) => (a.time > b.time) ? 1 : -1);
                 });
 
-                // 監聽 itinerary 變化，自動儲存
                 watch(itinerary, (newVal) => {
                     saveItinerary(newVal);
-                }, { deep: true }); // deep: true 確保監聽陣列內物件的變動
+                }, { deep: true });
 
                 const addItem = () => {
                     if (newItem.value.time && newItem.value.location) {
@@ -329,10 +387,9 @@
                         };
                         itinerary.value.push(newActivity);
                         newItem.value = { time: '', location: '' };
-                        // watch 會自動觸發儲存
                     }
                 };
-
+                
                 const editItem = (index) => {
                     const actualItem = filteredItinerary.value[index];
                     editingIndex.value = index; 
@@ -351,7 +408,6 @@
                             location: editingItem.value.location
                         };
                         cancelEdit();
-                        // watch 會自動觸發儲存
                     }
                 };
 
@@ -368,7 +424,6 @@
                         
                         itinerary.value.splice(originalIndex, 1);
                         cancelEdit();
-                        // watch 會自動觸發儲存
                     }
                 };
                 
@@ -388,7 +443,11 @@
                 const searchMap = () => {
                     navigateTo(mapSearchQuery.value);
                 };
-                // ------------------------------------
+                
+                // --- Vue 生命週期：網頁載入後立即抓取天氣 ---
+                onMounted(() => {
+                    fetchWeather();
+                });
 
                 return {
                     activeTab,
@@ -406,7 +465,7 @@
                     cancelEdit,
                     deleteItem,
                     navigateTo,
-                    macauWeather,
+                    macauWeather, // 更新為響應式天氣物件
                     // 地圖
                     mapSearchQuery,
                     searchMap,
