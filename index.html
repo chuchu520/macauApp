@@ -114,12 +114,12 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-80" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.356 2.5a1 1 0 01.326 1.353l-.986 1.71a1 1 0 11-1.71-1.026l.986-1.71a1 1 0 011.385-.326zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.644 4.5a1 1 0 011.385.326l.986 1.71a1 1 0 11-1.71 1.026l-.986-1.71a1 1 0 01.326-1.353zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM6 10a1 1 0 11-2 0 1 1 0 012 0zm10 0a1 1 0 11-2 0 1 1 0 012 0z" clip-rule="evenodd" /><path d="M10 3a7 7 0 100 14 7 7 0 000-14zm0 2a5 5 0 000 10 5 5 0 000-10z" /></svg></div>
 
                     <div class="mb-6 p-4 border rounded-xl bg-gray-50/50">
-                        <h3 class="font-semibold mb-3 text-primary border-l-4 border-primary pl-2">新增當日活動</h3>
+                        <h3 class="font-semibold mb-3 text-primary border-l-4 border-primary pl-2">新增當日活動 (需密碼)</h3>
                         <div class="space-y-3">
-                            <input type="time" v-model="newItem.time" class="w-full p-3 border rounded-lg focus:ring-primary focus:border-primary">
-                            <input type="text" v-model="newItem.location" placeholder="活動地點或名稱" class="w-full p-3 border rounded-lg focus:ring-primary focus:border-primary">
-                            <button @click="addItem" class="w-full color-primary text-white p-3 rounded-xl hover:opacity-90 transition duration-150 font-medium">
-                                新增行程
+                            <input type="time" v-model="newItem.time" class="w-full p-3 border rounded-lg">
+                            <input type="text" v-model="newItem.location" placeholder="活動地點或名稱" class="w-full p-3 border rounded-lg">
+                            <button @click="addItem" class="w-full color-primary text-white p-3 rounded-xl font-medium">
+                                確認新增
                             </button>
                         </div>
                     </div>
@@ -271,8 +271,8 @@
 };
 
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+   const firebaseApp = initializeApp(firebaseConfig);
+    const db = getFirestore(firebaseApp);
     const itineraryRef = collection(db, "macau_itinerary");
 
     const { createApp, ref, computed, onMounted } = Vue;
@@ -306,6 +306,7 @@
 
     createApp({
         setup() {
+            const correctPassword = "1234"; // 此處設定您的密碼
             const activeTab = ref('itinerary');
             const API_KEY = 'c3da620f54f87e1cc3e126f4ea8b805f';
             const MACAU_LAT = 22.1987;
@@ -329,6 +330,16 @@
                     macauWeather.value.isLoading = false;
                     macauWeather.value.error = true;
                 }
+            };
+            // --- 密碼驗證邏輯 ---
+            const checkPassword = () => {
+                const userPwd = prompt("請輸入操作密碼：");
+                if (userPwd === correctPassword) {
+                    return true;
+                } else if (userPwd !== null) {
+                    alert("密碼錯誤，操作已取消。");
+                }
+                return false;
             };
 
             // --- 1. 行程表邏輯 (Firebase 版) ---
@@ -373,43 +384,42 @@
             });
 
             const addItem = async () => {
-                if (newItem.value.time && newItem.value.location) {
+                if (!newItem.value.time || !newItem.value.location) return alert("請填寫時間與地點");
+                
+                if (checkPassword()) {
                     await addDoc(itineraryRef, { 
                         date: selectedDate.value,
                         time: newItem.value.time, 
                         location: newItem.value.location 
                     });
                     newItem.value = { time: '', location: '' };
+                    alert("新增成功！");
                 }
             };
             
-            const editItem = (item) => {
+           const editItem = (item) => {
                 editingId.value = item.id;
-                editingItem.value = { time: item.time, location: item.location, date: item.date };
+                editingItem.value = { ...item };
             };
 
             const saveEdit = async () => {
-                if (editingId.value) {
+                if (checkPassword()) {
                     const docRef = doc(db, "macau_itinerary", editingId.value);
                     await updateDoc(docRef, {
                         time: editingItem.value.time,
                         location: editingItem.value.location
                     });
-                    cancelEdit();
+                    editingId.value = null;
                 }
             };
 
-            const cancelEdit = () => {
-                editingId.value = null;
-                editingItem.value = { time: '', location: '' };
-            };
+            const cancelEdit = () => { editingId.value = null; };
 
             const deleteItem = async (id) => {
-                if (confirm('確定要刪除此行程嗎？')) {
+                if (checkPassword()) {
                     await deleteDoc(doc(db, "macau_itinerary", id));
                 }
             };
-
             // --- 2. 地圖邏輯 ---
             const mapSearchQuery = ref('澳門');
             const navigateTo = (location) => {
